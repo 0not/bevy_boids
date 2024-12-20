@@ -17,6 +17,14 @@ opt-level = 3
 
 [dependencies]
 bevy = { version = "0.15", features = ["wayland"] }
+rand = "0.8.5"
+# Unofficial Bevy book recommends using the "pure" feature for the blake3 crate when cross-compiling 
+# from Linux to Windows if using MSVC. I'm using GNU, but still ran into problems. Enabling
+# the feature didn't work, so I have to use the CARGO_FEATURE_PURE environment variable.
+# See: https://bevy-cheatbook.github.io/setup/cross/linux-windows.html
+#
+#    `> CARGO_FEATURE_PURE=1 cargo run --release --target x86_64-pc-windows-gnu`
+# blake3 = { version = "1.5.5", features = ["pure"] }
 
 # These lints may be important signals about code quality, but normal Bevy code
 # commonly triggers them and the CI workflow treats them as errors, so we've

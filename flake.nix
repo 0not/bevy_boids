@@ -19,6 +19,7 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+        cross = pkgs.pkgsCross.mingwW64;
         # wasm-server-runner = pkgs.rustPlatform.buildRustPackage rec {
         #   pname = "wasm-server-runner";
         #   # No tag exists for 0.6.3, so we use the commit hash
@@ -63,9 +64,11 @@
               libxkbcommon
               python3
               # wasm-server-runner
+              cross.buildPackages.gcc
+              cross.windows.pthreads
               (rust-bin.stable.latest.default.override {
                 extensions = [ "rust-src" ];
-                targets = [ "x86_64-unknown-linux-gnu" "wasm32-unknown-unknown" ];
+                targets = [ "x86_64-unknown-linux-gnu" "wasm32-unknown-unknown" "x86_64-pc-windows-gnu" ];
               })
             ];
             LD_LIBRARY_PATH = lib.makeLibraryPath [
