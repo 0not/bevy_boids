@@ -1,6 +1,9 @@
+// use core::time::Duration;
+
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
+// use bevy_spatial::{kdtree::KDTree3, AutomaticUpdate, SpatialAccess, TransformMode};
 
 const BOID_NUMBER: usize = 3000;
 const BOID_RADIUS: f32 = 10.0;
@@ -30,6 +33,11 @@ struct Boid {
 #[derive(Component)]
 struct Velocity(Vec3);
 
+#[derive(Component, Default)]
+struct TrackedByKDTree;
+
+// type NNTree = KDTree3<TrackedByKDTree>;
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(AssetPlugin {
@@ -39,6 +47,11 @@ fn main() {
             meta_check: AssetMetaCheck::Never,
             ..default()
         }))
+        // .add_plugins(
+        //     AutomaticUpdate::<TrackedByKDTree>::new()
+        //         .with_frequency(Duration::from_secs_f32(0.3))
+        //         .with_transform(TransformMode::GlobalTransform),
+        // )
         .add_systems(Startup, (setup, spawn_boids))
         // .add_systems(Update, (avoid_boundary, move_boids).chain())
         .add_systems(
@@ -93,6 +106,7 @@ fn spawn_boids(
                 MeshMaterial2d(materials.add(Color::WHITE)),
                 Transform::from_translation(translation),
                 Velocity(v),
+                TrackedByKDTree,
             ))
             .with_children(|parent| {
                 parent.spawn_empty().insert_if(
