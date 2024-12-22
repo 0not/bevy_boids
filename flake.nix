@@ -75,6 +75,7 @@
               libxkbcommon
               vulkan-loader
             ];
+            CARGO_FEATURE_PURE = "1";
           };
         }
     );
