@@ -16,8 +16,8 @@ opt-level = 1
 opt-level = 3
 
 [dependencies]
-bevy = { version = "0.15", features = ["wayland"] }
-# bevy_spatial = "0.10.0"
+bevy = { version = "0.15", features = ["wayland", "trace"] }
+bevy_spatial = "0.10.0"
 rand = "0.8.5"
 # Unofficial Bevy book recommends using the "pure" feature for the blake3 crate when cross-compiling 
 # from Linux to Windows if using MSVC. I'm using GNU, but still ran into problems. Enabling
