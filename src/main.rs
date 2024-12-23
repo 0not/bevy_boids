@@ -1,16 +1,16 @@
-// use core::time::Duration;
+use core::time::Duration;
 
 use bevy::asset::AssetMetaCheck;
+use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-// use bevy_spatial::{kdtree::KDTree3, AutomaticUpdate, SpatialAccess, TransformMode};
+use bevy_spatial::{kdtree::KDTree3, AutomaticUpdate, SpatialAccess, TransformMode};
 
-const BOID_NUMBER: usize = 3000;
+const BOID_NUMBER: usize = 20000;
 const BOID_RADIUS: f32 = 10.0;
 const BOID_SECTION_DEG: f32 = 10.0;
 const BOID_MAX_SPEED: f32 = 600.0;
 const BOID_MIN_SPEED: f32 = 50.0;
-// const BOID_SPEED_C
 const BOID_SEPARATION_FACTOR: f32 = 0.05;
 const BOID_ALIGNMENT_FACTOR: f32 = 0.05;
 const BOID_COHESION_FACTOR: f32 = 0.005;
@@ -36,7 +36,7 @@ struct Velocity(Vec3);
 #[derive(Component, Default)]
 struct TrackedByKDTree;
 
-// type NNTree = KDTree3<TrackedByKDTree>;
+type NNTree = KDTree3<TrackedByKDTree>;
 
 fn main() {
     App::new()
@@ -47,17 +47,16 @@ fn main() {
             meta_check: AssetMetaCheck::Never,
             ..default()
         }))
-        // .add_plugins(
-        //     AutomaticUpdate::<TrackedByKDTree>::new()
-        //         .with_frequency(Duration::from_secs_f32(0.3))
-        //         .with_transform(TransformMode::GlobalTransform),
-        // )
-        .add_systems(Startup, (setup, spawn_boids))
-        // .add_systems(Update, (avoid_boundary, move_boids).chain())
-        .add_systems(
-            Update,
-            (boids_behavior, avoid_boundary, move_boids, color_boids).chain(),
+        .add_plugins((
+            FrameTimeDiagnosticsPlugin::default(),
+            LogDiagnosticsPlugin::default(),
+        ))
+        .add_plugins(
+            AutomaticUpdate::<TrackedByKDTree>::new()
+                .with_frequency(Duration::from_secs_f32(1. / 10.)), // .with_transform(TransformMode::GlobalTransform),
         )
+        .add_systems(Startup, (setup, spawn_boids))
+        .add_systems(Update, (boids_behavior, avoid_boundary, move_boids).chain())
         .run();
 }
 
@@ -83,14 +82,16 @@ fn spawn_boids(
         BOID_ALIGNMENT_RADIUS,
     ));
 
+    let color = materials.add(Color::WHITE);
+
     for _ in 0..BOID_NUMBER {
         let x = rand::random::<f32>() * 800. - 400.;
         let y = rand::random::<f32>() * 600. - 300.;
         let translation = Vec3::new(x, y, 0.);
         // let vx = rand::random::<f32>() * BOID_MAX_SPEED - BOID_MAX_SPEED / 2.;
         // let vy = rand::random::<f32>() * BOID_MAX_SPEED - BOID_MAX_SPEED / 2.;
-        // let v = translation.cross(Vec3::Z).normalize() * BOID_MAX_SPEED / 6.;
-        let v = Vec3::ZERO;
+        let v = translation.cross(Vec3::Z).normalize() * BOID_MAX_SPEED / 6.;
+        // let v = Vec3::ZERO;
 
         commands
             .spawn((
@@ -103,7 +104,8 @@ fn spawn_boids(
                     n_neighbors: 0,
                 },
                 Mesh2d(shape.clone()),
-                MeshMaterial2d(materials.add(Color::WHITE)),
+                // MeshMaterial2d(materials.add(Color::WHITE)),
+                MeshMaterial2d(color.clone()),
                 Transform::from_translation(translation),
                 Velocity(v),
                 TrackedByKDTree,
@@ -130,36 +132,42 @@ fn spawn_boids(
 }
 
 fn boids_behavior(
-    mut q_boids: Query<(&mut Boid, &Transform)>,
-    q_boids_other: Query<(&Transform, &Velocity), With<Boid>>,
+    mut q_boids: Query<(Entity, &mut Boid, &Transform)>,
+    q_boids_other: Query<(&Velocity), With<Boid>>,
+    tree: Res<NNTree>,
     // mut paramset: ParamSet<(
     //     Query<(&Boid, &Transform, &mut Velocity)>,
     //     Query<(&Boid, &Transform, &Velocity)>,
     // )>,
 ) {
-    for (mut boid, transform) in q_boids.iter_mut() {
+    for (entity, mut boid, transform) in q_boids.iter_mut() {
         let mut separation = Vec3::ZERO;
         let mut alignment = Vec3::ZERO;
         let mut position = Vec3::ZERO;
 
         let mut n_neighbors = 0;
 
-        for (other_transform, other_velocity) in q_boids_other.iter() {
-            // if boid == other_boid {
-            //     continue;
-            // }
-            // Separation
-            let distance = transform.translation.distance(other_transform.translation);
-            if distance <= f32::EPSILON {
-                // Don't count self
+        // for (other_transform, other_velocity) in q_boids_other.iter() {
+        for (other_position, other_entity) in tree
+            .within_distance(transform.translation, boid.align_radius)
+            .iter()
+        {
+            let other_entity = other_entity.unwrap();
+            if entity == other_entity {
                 continue;
-            } else if distance < boid.avoid_radius {
-                separation += transform.translation - other_transform.translation;
             }
-            // Alignment
-            else if distance < boid.align_radius {
+
+            let other_velocity: &Velocity = q_boids_other.get(other_entity).unwrap();
+
+            // Separation
+            let distance = transform.translation.distance(*other_position);
+
+            if distance < boid.avoid_radius {
+                separation += transform.translation - other_position;
+            } else {
+                // Alignment
                 alignment += other_velocity.0;
-                position += other_transform.translation;
+                position += other_position;
                 n_neighbors += 1;
             }
         }
@@ -216,7 +224,10 @@ fn move_boids(time: Res<Time>, mut query: Query<(&mut Boid, &mut Transform, &mut
             velocity.0 = velocity.0.normalize() * BOID_MAX_SPEED;
         }
 
-        if velocity.0.length() < BOID_MIN_SPEED {
+        // Hack for zero velocity
+        if velocity.0.length() == 0. {
+            velocity.0 = Vec3::new(1., 0., 0.) * BOID_MIN_SPEED;
+        } else if velocity.0.length() < BOID_MIN_SPEED {
             velocity.0 = velocity.0.normalize() * BOID_MIN_SPEED;
         }
 
