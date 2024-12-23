@@ -1,4 +1,5 @@
 use bevy::asset::AssetMetaCheck;
+use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
@@ -39,6 +40,7 @@ fn main() {
             meta_check: AssetMetaCheck::Never,
             ..default()
         }))
+        .add_plugins((FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin::default()))
         .add_systems(Startup, (setup, spawn_boids))
         // .add_systems(Update, (avoid_boundary, move_boids).chain())
         .add_systems(

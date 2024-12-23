@@ -1,3 +1,10 @@
+# Build Note
+For me, this `flake.nix` is not perfectly reproducible. After a `cargo clean`, I cannot build for Windows with `--target x86_64-pc-windows-gnu` without first building for Linux with `--target x86_64-unknown-linux-gnu`. However, I cannot build for Linux while `cross.windows.pthreads` is included in the `buildInputs` because the system tries to link that instead of the native libpthreads (unless I've already built for Linux, in which case it ignores `cross.windows.pthreads` when building again). The solution is to comment out `cross.windows.pthreads` in `flake.nix` and build for Linux. I also comment out `cross.buildPackages.gcc`, but that might not be necessary. After that builds, I add back both the `cross` lines in `flake.nix` and rebuild for Windows with: `CARGO_FEATURE_PURE=1 cargo run --release --target x86_64-pc-windows-gnu`. The environment variable `CARGO_FEATURE_PURE` is to fix a bug with compiling `blake3`, which want to run some Windows build scripts.
+
+I'm very new to Nix, so there is probably a nice way reproducible way to handle targeting native and Windows in the same dev shell. I just don't know how.
+
+-------OLD README--------
+
 # Bevy GitHub CI Template
 
 This repo show how to set up CI on a GitHub project for Bevy.

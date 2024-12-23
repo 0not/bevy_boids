@@ -4,7 +4,12 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    rust-overlay.url = "github:oxalica/rust-overlay";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
   };
 
   outputs = {
@@ -64,8 +69,8 @@
               libxkbcommon
               python3
               # wasm-server-runner
-              cross.buildPackages.gcc
-              cross.windows.pthreads
+              # cross.buildPackages.gcc
+              # cross.windows.pthreads
               (rust-bin.stable.latest.default.override {
                 extensions = [ "rust-src" ];
                 targets = [ "x86_64-unknown-linux-gnu" "wasm32-unknown-unknown" "x86_64-pc-windows-gnu" ];
