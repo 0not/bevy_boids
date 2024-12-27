@@ -68,9 +68,10 @@
               wayland
               libxkbcommon
               python3
+              cargo-flamegraph
               # wasm-server-runner
-              # cross.buildPackages.gcc
-              # cross.windows.pthreads
+              cross.buildPackages.gcc
+              cross.windows.pthreads
               (rust-bin.stable.latest.default.override {
                 extensions = [ "rust-src" ];
                 targets = [ "x86_64-unknown-linux-gnu" "wasm32-unknown-unknown" "x86_64-pc-windows-gnu" ];
